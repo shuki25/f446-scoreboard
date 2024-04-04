@@ -131,6 +131,8 @@ typedef struct scoreboard {
     uint8_t num_consoles;
     mode_t mode;
     uint8_t polling_mode;
+    uint8_t demo_mode;
+    uint8_t is_demo_mode_initialized;
     score_t scores[MAX_NUM_CONSOLES];
 } scoreboard_t;
 

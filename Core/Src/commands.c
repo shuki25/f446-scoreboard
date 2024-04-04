@@ -14,8 +14,8 @@
  *---------------------------------------------------------------------------*/
 
 const char *valid_commands[] = { "", "@terminal", "@pc_console", "@scoreboard", "@set_date", "@set_time",
-        "@get_date", "@get_time", "@devices", "@scores", "@poll", NULL };
-uint8_t valid_num_params[] = { 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1 };
+        "@get_date", "@get_time", "@devices", "@scores", "@poll", "@demo", NULL };
+uint8_t valid_num_params[] = { 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1 };
 
 command_t parse_command(uint8_t *command, uint8_t *token, uint8_t *parameter) {
     uint8_t num_returned;
@@ -190,12 +190,14 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                 print_pc_console(scoreboard, output_buffer);
             } else {
                 uint8_t first = 1;
+                uint8_t has_scores = 0;
                 for (int i = 0; i < scoreboard->num_consoles; i++) {
                     if (!scoreboard->scores[i].is_connected) {
                         continue;
                     }
+                    has_scores = 1;
                     if (first) {
-                        print_scoreboard(scoreboard, "{\"consoles\": {\"console\":[");
+                        print_scoreboard(scoreboard, "\r\n{\"consoles\": {\"console\":[");
                         first = 0;
                     } else {
                         print_scoreboard(scoreboard, ",");
@@ -220,7 +222,11 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                             scoreboard->scores[i].with_poison);
                     print_scoreboard(scoreboard, output_buffer);
                 }
-                print_scoreboard(scoreboard, "]}}\n");
+                if (has_scores) {
+                    print_scoreboard(scoreboard, "]}}\n");
+                } else {
+                    print_scoreboard(scoreboard, "{'consoles': 'none', 'status': 1}\n");
+                }
             }
             break;
         case CMD_POLLING_MODE:
@@ -228,6 +234,58 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                 scoreboard->polling_mode = 1;
             } else if (strcmp((char*) parameter, "off") == 0) {
                 scoreboard->polling_mode = 0;
+            } else {
+                if (scoreboard->mode == TERMINAL_CONSOLE_MODE) {
+                    sprintf(output_buffer, "\r\nInvalid polling mode\n");
+                    print_terminal(scoreboard, output_buffer);
+                } else if (scoreboard->mode == PC_CONSOLE_MODE) {
+                    sprintf(output_buffer, "ERR\tInvalid polling mode\n");
+                    print_pc_console(scoreboard, output_buffer);
+                } else {
+                    sprintf(output_buffer, "{'error': 'Invalid polling mode', 'status': 0}\n");
+                    print_scoreboard(scoreboard, output_buffer);
+                }
+                return INVALID_COMMAND;
+            }
+            break;
+        case CMD_DEMO_MODE:
+            if (strcmp((char*) parameter, "on") == 0) {
+                scoreboard->demo_mode = 1;
+            } else if (strcmp((char*) parameter, "off") == 0) {
+                scoreboard->demo_mode = 0;
+            } else if (strcmp((char*) parameter, "status") == 0) {
+                if (scoreboard->mode == TERMINAL_CONSOLE_MODE) {
+                    sprintf(output_buffer, "\r\nDemo mode: %s\r\n", scoreboard->demo_mode ? "on" : "off");
+                    print_terminal(scoreboard, output_buffer);
+                } else if (scoreboard->mode == PC_CONSOLE_MODE) {
+                    sprintf(output_buffer, "OK\t%s\n", scoreboard->demo_mode ? "on" : "off");
+                    print_pc_console(scoreboard, output_buffer);
+                } else {
+                    sprintf(output_buffer, "{'demo_mode': '%s', 'status': 1}\n",
+                            scoreboard->demo_mode ? "on" : "off");
+                    print_scoreboard(scoreboard, output_buffer);
+                }
+            } else if (strcmp((char*) parameter, "reset") == 0) {
+                for (int i = 0; i < scoreboard->num_consoles; i++) {
+                    scoreboard->scores[i].score1 = 0;
+                    scoreboard->scores[i].score2 = 0;
+                    scoreboard->scores[i].apples1 = 0;
+                    scoreboard->scores[i].apples2 = 0;
+                    scoreboard->scores[i].level = 1;
+                    scoreboard->scores[i].with_poison = 0;
+                    scoreboard->scores[i].playing_mode = 0;
+                    scoreboard->scores[i].game_status = 0;
+                }
+                if (scoreboard->mode == TERMINAL_CONSOLE_MODE) {
+                    sprintf(output_buffer, "\r\nDemo mode reset\r\n");
+                    print_terminal(scoreboard, output_buffer);
+                } else if (scoreboard->mode == PC_CONSOLE_MODE) {
+                    sprintf(output_buffer, "OK\tDemo mode reset\n");
+                    print_pc_console(scoreboard, output_buffer);
+                } else {
+                    sprintf(output_buffer, "{'demo_mode': 'reset', 'status': 1}\n");
+                    print_scoreboard(scoreboard, output_buffer);
+                }
             } else {
                 if (scoreboard->mode == TERMINAL_CONSOLE_MODE) {
                     sprintf(output_buffer, "\r\nInvalid polling mode\n");
