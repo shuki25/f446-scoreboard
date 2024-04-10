@@ -57,9 +57,6 @@ uint32_t rng_get(uint32_t max_value) {
  * Return: None
  *-----------------------------------------------------------------------------------------------*/
 void scoreboard_init() {
-    // TODO: Initialize the I2C bus
-    // TODO: Initialize the GPIO pins
-
     memset(&scoreboard, 0, sizeof(scoreboard_t));
     scoreboard.mode = SCOREBOARD_MODE;
     scoreboard.num_consoles = MAX_NUM_CONSOLES;
@@ -102,10 +99,11 @@ void scoreboard_demo_mode_init() {
             } else {
                 scoreboard.scores[i].grid_size = 0;
             }
+            scoreboard.scores[i].playing_time = rng_get(240);
             scoreboard.scores[i].game_difficulty = rng_get(3);
-            scoreboard.scores[i].cause_of_death = 3 + rng_get(3);
-            scoreboard.scores[i].game_speed = rng_get(3);
+            scoreboard.scores[i].cause_of_death = 0;
             scoreboard.scores[i].level = rng_get(3);
+            scoreboard.scores[i].game_speed = 50 - scoreboard.scores[i].level * 5;
             scoreboard.scores[i].with_poison = rng_get(2) ? 1 : 0;
         }
     }
@@ -169,6 +167,7 @@ void scoreboard_start() {
             scoreboard.scores[j].score2 = i2c_scoreboard[j].current_score2;
             scoreboard.scores[j].apples1 = i2c_scoreboard[j].number_apples1;
             scoreboard.scores[j].apples2 = i2c_scoreboard[j].number_apples2;
+            scoreboard.scores[j].playing_time = i2c_scoreboard[j].playing_time;
             scoreboard.scores[j].level = (i2c_scoreboard[j].current_game_state & GAME_PLAYING_LEVEL)
                     >> GAME_PLAYING_LEVEL_SHIFT;
             scoreboard.scores[j].playing_mode = i2c_scoreboard[j].current_game_state2 & GAME_NUM_PLAYERS;
@@ -181,6 +180,7 @@ void scoreboard_start() {
             scoreboard.scores[j].score2 = 0;
             scoreboard.scores[j].apples1 = 0;
             scoreboard.scores[j].apples2 = 0;
+            scoreboard.scores[j].playing_time = 0;
             scoreboard.scores[j].level = 0;
             scoreboard.scores[j].with_poison = 0;
             scoreboard.scores[j].playing_mode = 0;
@@ -191,6 +191,14 @@ void scoreboard_start() {
     /* Infinite loop */
     for (;;) {
         if (delta_link || link_counter == 0) {
+            // Reset I2C bus and scan for connected devices
+            SYSCFG->CFGR |= SYSCFG_CFGR_FMPI2C1_SCL;
+            SYSCFG->CFGR |= SYSCFG_CFGR_FMPI2C1_SDA;
+            HAL_I2C_DeInit(&hi2c1);
+            SYSCFG->CFGR &= ~SYSCFG_CFGR_FMPI2C1_SCL;
+            SYSCFG->CFGR &= ~SYSCFG_CFGR_FMPI2C1_SDA;
+            HAL_I2C_Init(&hi2c1);
+
             i2c_master_scan(&hi2c1, consoles);
             for (int i = 0; i < MAX_NUM_CONSOLES; i++) {
                 if (link_status[i]) {
@@ -200,6 +208,7 @@ void scoreboard_start() {
             delta_link = 0;
             link_counter = 5;
         }
+        // Check for incoming new data in the ring buffer
         if (rx_buffer.new_data) {
             rx_buffer.new_data = false;
             for (int j = rx_buffer.num_new_data - 1; j >= 0; j--) {
@@ -260,6 +269,7 @@ void scoreboard_start() {
                     if (scoreboard.scores[j].game_status == 1) {
                         if (scoreboard.scores[j].score1 > 150 && rng_get(50) >= 35) {
                             scoreboard.scores[j].game_status = 3;
+                            scoreboard.scores[j].cause_of_death = 1 + rng_get(4);
                         }
                         if (rng_get(20) >= 7) {
                             scoreboard.scores[j].score1 += rng_get(10) + 1;
@@ -269,6 +279,7 @@ void scoreboard_start() {
                                 scoreboard.scores[j].apples2 += rng_get(2) + 1;
                             }
                         }
+                        scoreboard.scores[j].playing_time++;
                     } else if (scoreboard.scores[j].game_status == 3) {
                         if (rng_get(100) >= 87) {
                             scoreboard.scores[j].game_status = 1;
@@ -284,10 +295,11 @@ void scoreboard_start() {
                             } else {
                                 scoreboard.scores[j].grid_size = 0;
                             }
+                            scoreboard.scores[j].playing_time = rng_get(120);
                             scoreboard.scores[j].game_difficulty = rng_get(3);
-                            scoreboard.scores[j].cause_of_death = 3 + rng_get(3);
-                            scoreboard.scores[j].game_speed = rng_get(3);
+                            scoreboard.scores[j].cause_of_death = 0;
                             scoreboard.scores[j].level = rng_get(3);
+                            scoreboard.scores[i].game_speed = 50 - scoreboard.scores[i].level * 5;
                             scoreboard.scores[j].with_poison = rng_get(2) ? 1 : 0;
                         }
                     }
@@ -321,6 +333,7 @@ void scoreboard_start() {
                         scoreboard.scores[j].score2 = i2c_scoreboard[j].current_score2;
                         scoreboard.scores[j].apples1 = i2c_scoreboard[j].number_apples1;
                         scoreboard.scores[j].apples2 = i2c_scoreboard[j].number_apples2;
+                        scoreboard.scores[j].playing_time = i2c_scoreboard[j].playing_time;
                         scoreboard.scores[j].level = (i2c_scoreboard[j].current_game_state
                                 & GAME_PLAYING_LEVEL) >> GAME_PLAYING_LEVEL_SHIFT;
                         scoreboard.scores[j].playing_mode = i2c_scoreboard[j].current_game_state2

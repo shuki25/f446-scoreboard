@@ -92,18 +92,8 @@ typedef enum mode {
 } mode_t;
 
 typedef enum {
-    SNAKE_OK,
-    SNAKE_FOOD_SPAWNED,
-    SNAKE_OUT_OF_BOUNDS,
-    SNAKE_DEATH_BY_WALL,
-    SNAKE_DEATH_BY_BODY,
-    SNAKE_DEATH_BY_SELF,
-    SNAKE_DEATH_BY_POISON,
-    SNAKE_WALL_NOT_GENERATED,
-    SNAKE_WALL_GENERATED,
-    SNAKE_ERROR,
-    SNAKE_MALLOC_FAILED
-} snake_status_t;
+    NO_COLLISION, SNAKE_BODY_COLLISION, FOOD_COLLISION, POISON_FOOD_COLLISION, WALL_COLLISION, SNAKE_SELF_COLLISION
+} snake_collision_t;
 
 typedef enum {
     GRID_SIZE_16X16, GRID_SIZE_32X16, GRID_SIZE_32X32, NUM_GRID_SIZE_OPTIONS
@@ -115,13 +105,14 @@ typedef struct score {
     uint8_t clock_sync;
     uint8_t game_status;
     options_difficulty_t game_difficulty;
-    snake_status_t cause_of_death;
+    snake_collision_t cause_of_death;
     uint8_t game_speed;
     uint8_t is_connected;
     uint16_t score1;
     uint16_t score2;
     uint16_t apples1;
     uint16_t apples2;
+    uint16_t playing_time;
     uint8_t level;
     uint8_t playing_mode;
     uint8_t with_poison;

@@ -27,6 +27,7 @@ typedef enum command {
     CMD_LIST_SCORES,
     CMD_POLLING_MODE,
     CMD_DEMO_MODE,
+    CMD_STATS,
     NUM_COMMANDS
 } command_t;
 
