@@ -14,8 +14,10 @@
  *---------------------------------------------------------------------------*/
 
 const char *valid_commands[] = { "", "@terminal", "@pc_console", "@scoreboard", "@set_date", "@set_time",
-        "@get_date", "@get_time", "@devices", "@scores", "@poll", "@demo", NULL };
+        "@get_date", "@get_time", "@devices", "@scores", "@poll", "@demo", "@stats", NULL };
 uint8_t valid_num_params[] = { 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1 };
+const char *snake_names[] =
+        { "", "Ball Python", "Red-Tail Boa", "Black Rat Snake", "King Snake", "Corn Snake" };
 
 command_t parse_command(uint8_t *command, uint8_t *token, uint8_t *parameter) {
     uint8_t num_returned;
@@ -65,6 +67,7 @@ uint8_t parse_time(uint8_t *time, uint16_t *hour, uint16_t *minute, uint16_t *se
 
 cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_t *parameter) {
     uint16_t year, month, day, hour, minute, second;
+    uint8_t num_console;
     char output_buffer[256];
     memset(output_buffer, 0, sizeof(output_buffer));
 
@@ -155,19 +158,48 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
             }
             break;
         case CMD_LIST_DEVICES:
+            num_console = 0;
+            for (int i = 0; i < scoreboard->num_consoles; i++) {
+                if (scoreboard->scores[i].is_connected)
+                    num_console++;
+            }
+
             if (scoreboard->mode == TERMINAL_CONSOLE_MODE) {
-                sprintf(output_buffer, "\r\nDevices: %d\r\n", scoreboard->num_consoles);
+                sprintf(output_buffer, "\r\nGaming Consoles:");
                 print_terminal(scoreboard, output_buffer);
                 for (int i = 0; i < scoreboard->num_consoles; i++) {
-                    sprintf(output_buffer, "Console %d: %d\r\n", i, scoreboard->scores[i].console_id);
-                    print_terminal(scoreboard, output_buffer);
+                    if (scoreboard->scores[i].is_connected) {
+                        sprintf(output_buffer, " %s", snake_names[scoreboard->scores[i].console_id]);
+                        print_terminal(scoreboard, output_buffer);
+                    }
                 }
+                print_terminal(scoreboard, "\r\n");
             } else if (scoreboard->mode == PC_CONSOLE_MODE) {
-                sprintf(output_buffer, "OK\t%d\n", scoreboard->num_consoles);
+                sprintf(output_buffer, "OK\t%d", num_console);
                 print_pc_console(scoreboard, output_buffer);
+                for (int i = 0; i < scoreboard->num_consoles; i++) {
+                    if (scoreboard->scores[i].is_connected) {
+                        sprintf(output_buffer, "\t%s", snake_names[scoreboard->scores[i].console_id]);
+                        print_pc_console(scoreboard, output_buffer);
+                    }
+                }
+                print_pc_console(scoreboard, "\n");
             } else {
-                sprintf(output_buffer, "{'devices': %d, 'status': 1}\n", scoreboard->num_consoles);
-                print_scoreboard(scoreboard, output_buffer);
+                for (int i = 0; i < scoreboard->num_consoles; i++) {
+                    if (!scoreboard->scores[i].is_connected) {
+                        continue;
+                    }
+                    if (i == 0) {
+                        sprintf(output_buffer, "{\"num_devices\": %d, \"devices\":[", num_console);
+                        print_scoreboard(scoreboard, output_buffer);
+                    } else {
+                        print_scoreboard(scoreboard, ",");
+                    }
+                    sprintf(output_buffer, "{\"console_id\": %d, \"snake_name\": \"%s\"}",
+                            scoreboard->scores[i].console_id, snake_names[scoreboard->scores[i].console_id]);
+                    print_scoreboard(scoreboard, output_buffer);
+                }
+                print_scoreboard(scoreboard, "]}\n");
             }
             break;
         case CMD_LIST_SCORES:
@@ -186,8 +218,24 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                     }
                 }
             } else if (scoreboard->mode == PC_CONSOLE_MODE) {
-                sprintf(output_buffer, "OK\t%d\n", scoreboard->num_consoles);
+                num_console = 0;
+                for (int i = 0; i < scoreboard->num_consoles; i++) {
+                    if (scoreboard->scores[i].is_connected)
+                        num_console++;
+                }
+                sprintf(output_buffer, "OK\t%d\n", num_console);
                 print_pc_console(scoreboard, output_buffer);
+                for (int i = 0; i < scoreboard->num_consoles; i++) {
+                    if (scoreboard->scores[i].is_connected) {
+                        sprintf(output_buffer, "CONSOLE %d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+                                scoreboard->scores[i].console_id, scoreboard->scores[i].score1,
+                                scoreboard->scores[i].score2, scoreboard->scores[i].apples1,
+                                scoreboard->scores[i].apples2, scoreboard->scores[i].level,
+                                scoreboard->scores[i].with_poison, scoreboard->scores[i].playing_mode,
+                                scoreboard->scores[i].game_status, scoreboard->scores[i].playing_time);
+                        print_pc_console(scoreboard, output_buffer);
+                    }
+                }
             } else {
                 uint8_t first = 1;
                 uint8_t has_scores = 0;
@@ -216,10 +264,12 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                             scoreboard->scores[i].score2);
                     print_scoreboard(scoreboard, output_buffer);
                     sprintf(output_buffer,
-                            "\"apples1\": %d, \"apples2\": %d, \"level\": %d, \"playing_mode\": %d, \"with_poison\": %d}",
+                            "\"apples1\": %d, \"apples2\": %d, \"level\": %d, \"playing_mode\": %d, \"with_poison\": %d, ",
                             scoreboard->scores[i].apples1, scoreboard->scores[i].apples2,
                             scoreboard->scores[i].level, scoreboard->scores[i].playing_mode,
                             scoreboard->scores[i].with_poison);
+                    print_scoreboard(scoreboard, output_buffer);
+                    sprintf(output_buffer, "\"playing_time\": %d}", scoreboard->scores[i].playing_time);
                     print_scoreboard(scoreboard, output_buffer);
                 }
                 if (has_scores) {
