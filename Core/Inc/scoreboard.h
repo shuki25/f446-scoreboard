@@ -85,6 +85,7 @@ typedef struct {                    // Register Map
     char initials_hard[3];          // 0x26
     char initials_insane[3];        // 0x29
     uint32_t date_time;             // 0x2C
+    uint32_t command;               // 0x30
 } i2c_scoreboard_t;
 
 typedef enum mode {
@@ -118,6 +119,21 @@ typedef struct score {
     uint8_t with_poison;
 } score_t;
 
+typedef struct stats {
+    uint16_t num_apples_easy;
+    uint16_t num_apples_medium;
+    uint16_t num_apples_hard;
+    uint16_t num_apples_insane;
+    uint16_t high_score_easy;
+    uint16_t high_score_medium;
+    uint16_t high_score_hard;
+    uint16_t high_score_insane;
+    char initials_easy[4];
+    char initials_medium[4];
+    char initials_hard[4];
+    char initials_insane[4];
+} stats_t;
+
 typedef struct scoreboard {
     uint8_t num_consoles;
     mode_t mode;
@@ -125,6 +141,7 @@ typedef struct scoreboard {
     uint8_t demo_mode;
     uint8_t is_demo_mode_initialized;
     score_t scores[MAX_NUM_CONSOLES];
+    stats_t stats[MAX_NUM_CONSOLES];
 } scoreboard_t;
 
 

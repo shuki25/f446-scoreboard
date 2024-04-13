@@ -16,6 +16,7 @@
 
 typedef enum command {
     INVALID_COMMAND,
+    INVALID_PARAMETER_COUNT,
     CMD_TERMINAL_MODE,
     CMD_PC_MODE,
     CMD_SCOREBOARD_MODE,
@@ -28,6 +29,8 @@ typedef enum command {
     CMD_POLLING_MODE,
     CMD_DEMO_MODE,
     CMD_STATS,
+    CMD_SET_SPEED,
+    CMD_SET_GAME,
     NUM_COMMANDS
 } command_t;
 

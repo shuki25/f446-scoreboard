@@ -8,25 +8,93 @@
 #include "commands.h"
 #include "rtc.h"
 #include "ui.h"
+#include <ctype.h>
 
 /*-----------------------------------------------------------------------------
  * List of valid console/PC commands
  *---------------------------------------------------------------------------*/
-
-const char *valid_commands[] = { "", "@terminal", "@pc_console", "@scoreboard", "@set_date", "@set_time",
-        "@get_date", "@get_time", "@devices", "@scores", "@poll", "@demo", "@stats", NULL };
-uint8_t valid_num_params[] = { 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1 };
+// Must align with command_t
+const char *valid_commands[] = { "", "", "@terminal", "@pc_console", "@scoreboard", "@set_date", "@set_time",
+        "@get_date", "@get_time", "@devices", "@scores", "@poll", "@demo", "@stats", "@set_speed",
+        "@set_game", NULL };
+uint8_t valid_num_params[] = { 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0 };
 const char *snake_names[] =
         { "", "Ball Python", "Red-Tail Boa", "Black Rat Snake", "King Snake", "Corn Snake" };
 
-command_t parse_command(uint8_t *command, uint8_t *token, uint8_t *parameter) {
-    uint8_t num_returned;
-    num_returned = sscanf((char*) command, "%s %s", token, (char*) parameter);
+
+/*-----------------------------------------------------------------------------
+ * Function: trim_whitespace
+ *
+ * This function will trim whitespace from a string
+ *
+ * Parameters: char *dst - destination string
+ *            char *src - source string
+ * Return: None
+ *
+ *--------------------------------------------------------------------------- */
+void trim_whitespace(char *dst, char *src) {
     uint8_t i = 0;
+    uint8_t j = strlen(src);
+    while (isspace((unsigned char)src[i])) {
+        i++;
+    }
+    while (isspace((unsigned char)src[j])) {
+        j--;
+    }
+    strncpy(dst, src + i, j - i + 1);
+    dst[j] = '\0';
+}
+
+/*-----------------------------------------------------------------------------
+ * Function: num_parameters
+ *
+ * This function will count the number of parameters in a string
+ *
+ * Parameters: char *parameters - string of parameters
+ * Return: uint8_t - number of parameters
+ *---------------------------------------------------------------------------*/
+uint8_t num_parameters(char *parameters) {
+    uint8_t count = 1;
+    uint8_t str_len = strlen(parameters);
+    if (str_len == 0) {
+        return 0;
+    }
+
+    for (int i = 0; i < str_len; i++) {
+        if (parameters[i] == ' ') {
+            count++;
+        }
+    }
+    return count;
+}
+
+/*-----------------------------------------------------------------------------
+ * Function: parse_command
+ *
+ * This function will parse a command string and return the command token
+ *
+ * Parameters: uint8_t *command - command string
+ *             uint8_t *token - token to return
+ *             uint8_t *parameter - parameter to return
+ * Return: command_t - command token
+ *---------------------------------------------------------------------------*/
+command_t parse_command(uint8_t *command, uint8_t *token, uint8_t *parameter) {
+
+    char tmp_parameter[256];
+    memset(tmp_parameter, 0, sizeof(tmp_parameter));
+
+    sscanf((char*) command, "%s %s", token, (char*) parameter);
+    uint8_t i = 0;
+
+    trim_whitespace(tmp_parameter, (char*) parameter);
+    strcpy((char*) parameter, tmp_parameter);
+
+    uint8_t num_params = num_parameters((char*) parameter);
+
     while (valid_commands[i] != NULL) {
         if (strcmp((char*) token, valid_commands[i]) == 0) {
-            if (valid_num_params[i] != num_returned - 1) {
-                return INVALID_COMMAND;
+            if (valid_num_params[i] != num_params) {
+                return INVALID_PARAMETER_COUNT;
             }
             return i;
         }
@@ -35,6 +103,17 @@ command_t parse_command(uint8_t *command, uint8_t *token, uint8_t *parameter) {
     return INVALID_COMMAND;
 }
 
+/*-----------------------------------------------------------------------------
+ * Function: parse_date
+ *
+ * This function will parse a date string and return the year, month, and day
+ *
+ * Parameters: uint8_t *date - date string
+ *             uint16_t *year - year to return
+ *             uint16_t *month - month to return
+ *             uint16_t *day - day to return
+ * Return: uint8_t - 1 if successful, 0 if failed
+ *---------------------------------------------------------------------------*/
 uint8_t parse_date(uint8_t *date, uint16_t *year, uint16_t *month, uint16_t *day) {
     uint8_t num_returned;
     int y, m, d;
@@ -50,6 +129,17 @@ uint8_t parse_date(uint8_t *date, uint16_t *year, uint16_t *month, uint16_t *day
     }
 }
 
+/*-----------------------------------------------------------------------------
+ * Function: parse_time
+ *
+ * This function will parse a time string and return the hour, minute, and second
+ *
+ * Parameters: uint8_t *time - time string
+ *             uint16_t *hour - hour to return
+ *             uint16_t *minute - minute to return
+ *             uint16_t *second - second to return
+ * Return: uint8_t - 1 if successful, 0 if failed
+ *---------------------------------------------------------------------------*/
 uint8_t parse_time(uint8_t *time, uint16_t *hour, uint16_t *minute, uint16_t *second) {
     uint8_t num_returned;
     int h, m, s;
@@ -65,6 +155,16 @@ uint8_t parse_time(uint8_t *time, uint16_t *hour, uint16_t *minute, uint16_t *se
     }
 }
 
+/*-----------------------------------------------------------------------------
+ * Function: execute_command
+ *
+ * This function will execute a command
+ *
+ * Parameters: scoreboard_t *scoreboard - pointer to the scoreboard
+ *             command_t command - command token
+ *             uint8_t *parameter - parameter
+ * Return: cmd_status_t - status of the command
+ *---------------------------------------------------------------------------*/
 cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_t *parameter) {
     uint16_t year, month, day, hour, minute, second;
     uint8_t num_console;
@@ -348,6 +448,89 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                     print_scoreboard(scoreboard, output_buffer);
                 }
                 return INVALID_COMMAND;
+            }
+            break;
+        case CMD_STATS:
+            if (scoreboard->mode == TERMINAL_CONSOLE_MODE) {
+                for (int i = 0; i < scoreboard->num_consoles; i++) {
+                    if (scoreboard->scores[i].is_connected) {
+                        sprintf(output_buffer, "\r\nStats for %s console:\r\n",
+                                snake_names[scoreboard->scores[i].console_id]);
+                        print_terminal(scoreboard, output_buffer);
+                        sprintf(output_buffer,
+                                "Apples\r\n=======================\r\nEasy: %d, Medium: %d\r\nHard: %d, Insane: %d\r\n",
+                                scoreboard->stats[i].num_apples_easy, scoreboard->stats[i].num_apples_medium,
+                                scoreboard->stats[i].num_apples_hard, scoreboard->stats[i].num_apples_insane);
+                        print_terminal(scoreboard, output_buffer);
+                        sprintf(output_buffer,
+                                "High Scores\r\n=======================\r\nEasy: %d (%s), Medium: %d (%s)\r\nHard: %d (%s), Insane: %d (%s)\r\n",
+                                scoreboard->stats[i].high_score_easy, scoreboard->stats[i].initials_easy,
+                                scoreboard->stats[i].high_score_medium, scoreboard->stats[i].initials_medium,
+                                scoreboard->stats[i].high_score_hard, scoreboard->stats[i].initials_hard,
+                                scoreboard->stats[i].high_score_insane, scoreboard->stats[i].initials_insane);
+                        print_terminal(scoreboard, output_buffer);
+                    }
+                }
+            } else if (scoreboard->mode == PC_CONSOLE_MODE) {
+                num_console = 0;
+                for (int i = 0; i < scoreboard->num_consoles; i++) {
+                    if (scoreboard->scores[i].is_connected)
+                        num_console++;
+                }
+                sprintf(output_buffer, "OK\t%d\n", num_console);
+                print_pc_console(scoreboard, output_buffer);
+                for (int i = 0; i < scoreboard->num_consoles; i++) {
+                    if (scoreboard->scores[i].is_connected) {
+                        sprintf(output_buffer, "CONSOLE %d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d",
+                                scoreboard->scores[i].console_id, scoreboard->stats[i].num_apples_easy,
+                                scoreboard->stats[i].num_apples_medium, scoreboard->stats[i].num_apples_hard,
+                                scoreboard->stats[i].num_apples_insane, scoreboard->stats[i].high_score_easy,
+                                scoreboard->stats[i].high_score_medium, scoreboard->stats[i].high_score_hard,
+                                scoreboard->stats[i].high_score_insane,
+                                scoreboard->stats[i].high_score_insane);
+                        print_pc_console(scoreboard, output_buffer);
+                        sprintf(output_buffer, "\t%s\t%s\t%s\t%s\n", scoreboard->stats[i].initials_easy,
+                                scoreboard->stats[i].initials_medium, scoreboard->stats[i].initials_hard,
+                                scoreboard->stats[i].initials_insane);
+                    }
+                }
+            } else {
+                uint8_t first = 1;
+                uint8_t has_stats = 0;
+                for (int i = 0; i < scoreboard->num_consoles; i++) {
+                    if (!scoreboard->scores[i].is_connected) {
+                        continue;
+                    }
+                    has_stats = 1;
+                    if (first) {
+                        print_scoreboard(scoreboard, "\r\n{\"stats\": {\"console\":[");
+                        first = 0;
+                    } else {
+                        print_scoreboard(scoreboard, ",");
+                    }
+
+                    sprintf(output_buffer,
+                            "{\"console_id\":%d, \"num_apples_easy\":%d, \"num_apples_medium\": %d, \"num_apples_hard\": %d, \"num_apples_insane\": %d, ",
+                            scoreboard->scores[i].console_id, scoreboard->stats[i].num_apples_easy,
+                            scoreboard->stats[i].num_apples_medium, scoreboard->stats[i].num_apples_hard,
+                            scoreboard->stats[i].num_apples_insane);
+                    print_scoreboard(scoreboard, output_buffer);
+                    sprintf(output_buffer,
+                            "\"high_score_easy\": %d, \"high_score_medium\": %d, \"high_score_hard\": %d, \"high_score_insane\": %d, ",
+                            scoreboard->stats[i].high_score_easy, scoreboard->stats[i].high_score_medium,
+                            scoreboard->stats[i].high_score_hard, scoreboard->stats[i].high_score_insane);
+                    print_scoreboard(scoreboard, output_buffer);
+                    sprintf(output_buffer,
+                            "\"initials_easy\": \"%s\", \"initials_medium\": \"%s\", \"initials_hard\": \"%s\", \"initials_insane\": \"%s\"}",
+                            scoreboard->stats[i].initials_easy, scoreboard->stats[i].initials_medium,
+                            scoreboard->stats[i].initials_hard, scoreboard->stats[i].initials_insane);
+                    print_scoreboard(scoreboard, output_buffer);
+                }
+                if (has_stats) {
+                    print_scoreboard(scoreboard, "]}}\n");
+                } else {
+                    print_scoreboard(scoreboard, "{'stats': 'none', 'status': 1}\n");
+                }
             }
             break;
         default:

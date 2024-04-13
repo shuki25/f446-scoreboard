@@ -86,6 +86,7 @@ void scoreboard_demo_mode_init() {
         scoreboard.is_demo_mode_initialized = 1;
         for (int i = 0; i < MAX_NUM_CONSOLES; i++) {
             memset(&scoreboard.scores[i], 0, sizeof(score_t));
+            memset(&scoreboard.stats[i], 0, sizeof(stats_t));
             scoreboard.scores[i].console_id = i + 1;
             scoreboard.scores[i].is_connected = 1;
             scoreboard.scores[i].game_status = 1;
@@ -105,6 +106,26 @@ void scoreboard_demo_mode_init() {
             scoreboard.scores[i].level = rng_get(3);
             scoreboard.scores[i].game_speed = 50 - scoreboard.scores[i].level * 5;
             scoreboard.scores[i].with_poison = rng_get(2) ? 1 : 0;
+            scoreboard.stats[i].num_apples_easy = rng_get(100);
+            scoreboard.stats[i].num_apples_medium = rng_get(100);
+            scoreboard.stats[i].num_apples_hard = rng_get(100);
+            scoreboard.stats[i].num_apples_insane = rng_get(100);
+            scoreboard.stats[i].high_score_easy = rng_get(100);
+            scoreboard.stats[i].high_score_medium = rng_get(100);
+            scoreboard.stats[i].high_score_hard = rng_get(100);
+            scoreboard.stats[i].high_score_insane = rng_get(100);
+            scoreboard.stats[i].initials_easy[0] = 'A' + rng_get(26);
+            scoreboard.stats[i].initials_easy[1] = 'A' + rng_get(26);
+            scoreboard.stats[i].initials_easy[2] = 'A' + rng_get(26);
+            scoreboard.stats[i].initials_medium[0] = 'A' + rng_get(26);
+            scoreboard.stats[i].initials_medium[1] = 'A' + rng_get(26);
+            scoreboard.stats[i].initials_medium[2] = 'A' + rng_get(26);
+            scoreboard.stats[i].initials_hard[0] = 'A' + rng_get(26);
+            scoreboard.stats[i].initials_hard[1] = 'A' + rng_get(26);
+            scoreboard.stats[i].initials_hard[2] = 'A' + rng_get(26);
+            scoreboard.stats[i].initials_insane[0] = 'A' + rng_get(26);
+            scoreboard.stats[i].initials_insane[1] = 'A' + rng_get(26);
+            scoreboard.stats[i].initials_insane[2] = 'A' + rng_get(26);
         }
     }
 }
@@ -152,6 +173,8 @@ void scoreboard_start() {
             led_indicator_set_blink(&console_indicator[j], 400, 6);
             fetch_scoreboard_data(&hi2c1, &consoles[j], scoreboard_register);
             register2struct(scoreboard_register, &i2c_scoreboard[j]);
+            memset(&scoreboard.scores[j], 0, sizeof(score_t));
+            memset(&scoreboard.stats[j], 0, sizeof(stats_t));
             scoreboard.scores[j].console_id = consoles[j].device_id;
             scoreboard.scores[j].grid_size = (i2c_scoreboard[j].current_game_state3 & GAME_GRID_SIZE)
                     >> GAME_GRID_SIZE_SHIFT;
@@ -173,6 +196,18 @@ void scoreboard_start() {
             scoreboard.scores[j].playing_mode = i2c_scoreboard[j].current_game_state2 & GAME_NUM_PLAYERS;
             scoreboard.scores[j].with_poison = (i2c_scoreboard[j].current_game_state2 & GAME_POISON_FLAG)
                     >> GAME_POISON_SHIFT;
+            scoreboard.stats[j].num_apples_easy = i2c_scoreboard[j].num_apples_easy;
+            scoreboard.stats[j].num_apples_medium = i2c_scoreboard[j].num_apples_medium;
+            scoreboard.stats[j].num_apples_hard = i2c_scoreboard[j].num_apples_hard;
+            scoreboard.stats[j].num_apples_insane = i2c_scoreboard[j].num_apples_insane;
+            scoreboard.stats[j].high_score_easy = i2c_scoreboard[j].high_score_easy;
+            scoreboard.stats[j].high_score_medium = i2c_scoreboard[j].high_score_medium;
+            scoreboard.stats[j].high_score_hard = i2c_scoreboard[j].high_score_hard;
+            scoreboard.stats[j].high_score_insane = i2c_scoreboard[j].high_score_insane;
+            strncpy(scoreboard.stats[j].initials_easy, i2c_scoreboard[j].initials_easy, 3);
+            strncpy(scoreboard.stats[j].initials_medium, i2c_scoreboard[j].initials_medium, 3);
+            strncpy(scoreboard.stats[j].initials_hard, i2c_scoreboard[j].initials_hard, 3);
+            strncpy(scoreboard.stats[j].initials_insane, i2c_scoreboard[j].initials_insane, 3);
         } else {
             scoreboard.scores[j].console_id = consoles[j].device_id;
             scoreboard.scores[j].is_connected = 0;
@@ -238,17 +273,28 @@ void scoreboard_start() {
         if (has_command) {
             has_command = false;
             memset(output_buffer, 0, sizeof(output_buffer));
+            memset(command, 0, sizeof(command));
+            memset(parameter, 0, sizeof(parameter));
             cmd_token = parse_command(command_buffer, command, parameter);
-            if (cmd_token == INVALID_COMMAND) {
+            if (cmd_token == INVALID_COMMAND || cmd_token == INVALID_PARAMETER_COUNT) {
                 if (scoreboard.mode == PC_CONSOLE_MODE) {
-                    sprintf((char*) output_buffer, "ERR\tInvalid command: %s\r\n", command);
+                    if (cmd_token == INVALID_COMMAND)
+                        sprintf((char*) output_buffer, "ERR\tInvalid command: %s\r\n", command);
+                    else if (cmd_token == INVALID_PARAMETER_COUNT)
+                        sprintf((char*) output_buffer, "ERR\tInvalid parameter count\r\n");
                     print_pc_console(&scoreboard, (char*) output_buffer);
                 } else if (scoreboard.mode == TERMINAL_CONSOLE_MODE) {
-                    sprintf((char*) output_buffer, "\r\nInvalid command: %s\r\n", command);
+                    if (cmd_token == INVALID_COMMAND)
+                        sprintf((char*) output_buffer, "\r\nInvalid command: %s\r\n", command);
+                    else if (cmd_token == INVALID_PARAMETER_COUNT)
+                        sprintf((char*) output_buffer, "\r\nInvalid parameter count\r\n");
                     print_terminal(&scoreboard, (char*) output_buffer);
                 } else {
-                    sprintf((char*) output_buffer, "{'error': 'Invalid command: %s', 'status': 0}\n",
-                            command);
+                    if (cmd_token == INVALID_COMMAND)
+                        sprintf((char*) output_buffer, "{'error': 'Invalid command: %s', 'status': 0}\n",
+                                command);
+                    else if (cmd_token == INVALID_PARAMETER_COUNT)
+                        sprintf((char*) output_buffer, "{'error': 'Invalid parameter count', 'status': 0}\n");
                     print_scoreboard(&scoreboard, (char*) output_buffer);
                 }
 
@@ -307,6 +353,7 @@ void scoreboard_start() {
             } else if (!scoreboard.demo_mode && scoreboard.is_demo_mode_initialized) {
                 scoreboard.is_demo_mode_initialized = 0;
                 memset(scoreboard.scores, 0, sizeof(scoreboard.scores));
+                memset(scoreboard.stats, 0, sizeof(scoreboard.stats));
             } else {
                 for (int j = 0; j < MAX_NUM_CONSOLES; j++) {
                     if (link_status[j]) {
@@ -340,6 +387,19 @@ void scoreboard_start() {
                                 & GAME_NUM_PLAYERS;
                         scoreboard.scores[j].with_poison = (i2c_scoreboard[j].current_game_state2
                                 & GAME_POISON_FLAG) >> GAME_POISON_SHIFT;
+                        scoreboard.stats[j].num_apples_easy = i2c_scoreboard[j].num_apples_easy;
+                        scoreboard.stats[j].num_apples_medium = i2c_scoreboard[j].num_apples_medium;
+                        scoreboard.stats[j].num_apples_hard = i2c_scoreboard[j].num_apples_hard;
+                        scoreboard.stats[j].num_apples_insane = i2c_scoreboard[j].num_apples_insane;
+                        scoreboard.stats[j].high_score_easy = i2c_scoreboard[j].high_score_easy;
+                        scoreboard.stats[j].high_score_medium = i2c_scoreboard[j].high_score_medium;
+                        scoreboard.stats[j].high_score_hard = i2c_scoreboard[j].high_score_hard;
+                        scoreboard.stats[j].high_score_insane = i2c_scoreboard[j].high_score_insane;
+                        strncpy(scoreboard.stats[j].initials_easy, i2c_scoreboard[j].initials_easy, 3);
+                        strncpy(scoreboard.stats[j].initials_medium, i2c_scoreboard[j].initials_medium, 3);
+                        strncpy(scoreboard.stats[j].initials_hard, i2c_scoreboard[j].initials_hard, 3);
+                        strncpy(scoreboard.stats[j].initials_insane, i2c_scoreboard[j].initials_insane, 3);
+
                     } else {
                         scoreboard.scores[j].console_id = consoles[j].device_id;
                         scoreboard.scores[j].is_connected = 0;
