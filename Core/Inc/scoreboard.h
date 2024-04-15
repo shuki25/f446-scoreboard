@@ -61,6 +61,24 @@
 #define SECOND_MASK (0b00111111)
 #define SECOND_SHIFT (0)
 
+// 32-Bit Definitions for the command
+// 31    26  23     16        8        0
+// +------+---+-------+--------+--------+
+// |000000|CMD|RESERVE|  PARAM2|  PARAM1|
+// +------+---+-------+--------+--------+
+
+#define I2C_CMD_SET_SPEED       (0b001 << 23)
+#define I2C_CMD_SET_LEVEL       (0b010 << 23)
+#define I2C_CMD_SET_POISON      (0b011 << 23)
+#define I2C_CMD_PREPARE_GAME    (0b100 << 23)
+#define I2C_CMD_START_GAME      (0b101 << 23)
+#define I2C_CMD_PAUSE_GAME      (0b110 << 23)
+#define I2C_CMD_END_GAME        (0b111 << 23)
+#define PARAM1_MASK             (0b11111111)
+#define PARAM1_SHIFT            (0)
+#define PARAM2_MASK             (0b11111111 << 8)
+#define PARAM2_SHIFT            (8)
+
 typedef struct {                    // Register Map
     uint8_t console_info;           // 0x00
     uint8_t current_game_state;     // 0x01

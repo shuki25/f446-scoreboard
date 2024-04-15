@@ -15,9 +15,9 @@
  *---------------------------------------------------------------------------*/
 // Must align with command_t
 const char *valid_commands[] = { "", "", "@terminal", "@pc_console", "@scoreboard", "@set_date", "@set_time",
-        "@get_date", "@get_time", "@devices", "@scores", "@poll", "@demo", "@stats", "@set_speed",
-        "@set_game", NULL };
-uint8_t valid_num_params[] = { 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0 };
+        "@get_date", "@get_time", "@devices", "@scores", "@poll", "@demo", "@stats", "@set_speed", "@set_level",
+        "@prepare_game", "@start_game", "@end_game", "@pause_game", NULL };
+uint8_t valid_num_params[] = { 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 2, 1, 0, 0, 0 };
 const char *snake_names[] =
         { "", "Ball Python", "Red-Tail Boa", "Black Rat Snake", "King Snake", "Corn Snake" };
 
@@ -61,11 +61,59 @@ uint8_t num_parameters(char *parameters) {
     }
 
     for (int i = 0; i < str_len; i++) {
-        if (parameters[i] == ' ') {
+        if (isspace((unsigned char)parameters[i])) {
             count++;
         }
     }
     return count;
+}
+
+
+uint32_t parse_i2c_command(command_t cmd_token, uint8_t *parameter) {
+    uint32_t data = 0;
+    uint32_t param1 = 0;
+    uint32_t param2 = 0;
+    switch (cmd_token) {
+        case CMD_SET_SPEED: // param1 = speed
+            sscanf((char *)parameter, "%ld", &param1);
+            if (param1 > 0 && param1 <= 100) {
+                data = param1 & PARAM1_MASK;
+                data |= I2C_CMD_SET_SPEED;
+            }
+            break;
+        case CMD_SET_LEVEL: // param1 = level
+            sscanf((char *)parameter, "%ld", &param1);
+            if (param1 > 0 && param1 <= 4) {
+                data = param1 & PARAM1_MASK;
+                data |= I2C_CMD_SET_LEVEL;
+            }
+            break;
+        case CMD_PREPARE_GAME: // param1 = level, param2 = with_poison
+            sscanf((char *)parameter, "%ld %ld", &param1, &param2);
+            if (param1 >= 0 && param1 < 4 && param2 >= 0 && param2 <= 1) {
+                data = param1 & PARAM1_MASK;
+                data |= ((param2 << 8) & PARAM2_MASK);
+                data |= I2C_CMD_PREPARE_GAME;
+            }
+            break;
+        case CMD_START_GAME: // param1 = speed
+            sscanf((char *)parameter, "%ld", &param1);
+            if (param1 <= 100) {
+                data = param1 & PARAM1_MASK;
+                data |= I2C_CMD_START_GAME;
+            }
+            break;
+        case CMD_END_GAME: // no parameters
+            data |= I2C_CMD_END_GAME;
+            break;
+        case CMD_PAUSE_GAME: // no parameters
+            data |= I2C_CMD_PAUSE_GAME;
+            break;
+        default:
+            return 0;
+            break;
+    }
+    return data;
 }
 
 /*-----------------------------------------------------------------------------
@@ -81,9 +129,12 @@ uint8_t num_parameters(char *parameters) {
 command_t parse_command(uint8_t *command, uint8_t *token, uint8_t *parameter) {
 
     char tmp_parameter[256];
+
     memset(tmp_parameter, 0, sizeof(tmp_parameter));
 
-    sscanf((char*) command, "%s %s", token, (char*) parameter);
+    strcpy((char *)token, strtok((char *)command, " "));
+    strcpy((char *)parameter, strtok(NULL, ""));
+//    sscanf((char*) command, "%s %s", token, (char*) parameter);
     uint8_t i = 0;
 
     trim_whitespace(tmp_parameter, (char*) parameter);

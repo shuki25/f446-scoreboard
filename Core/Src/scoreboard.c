@@ -156,6 +156,7 @@ void scoreboard_start() {
     bool has_command = false;
     int i = 0; // command buffer index
     HAL_StatusTypeDef status;
+    uint32_t i2c_command = 0;
 
     // Initialize the ring buffer
     ring_buffer_init(&rx_buffer, 256, sizeof(uint8_t));
@@ -299,7 +300,21 @@ void scoreboard_start() {
                 }
 
             } else {
-                execute_command(&scoreboard, cmd_token, parameter);
+                switch (cmd_token) {
+                    case CMD_SET_SPEED:
+                    case CMD_SET_LEVEL:
+                    case CMD_PREPARE_GAME:
+                    case CMD_START_GAME:
+                    case CMD_END_GAME:
+                    case CMD_PAUSE_GAME:
+                        i2c_command = parse_i2c_command(cmd_token, parameter);
+                        if (i2c_command != 0)
+                            i2c_send_command(&hi2c1, consoles, i2c_command);
+                        break;
+                    default:
+                        execute_command(&scoreboard, cmd_token, parameter);
+                        break;
+                }
             }
         }
         osDelay(1);
@@ -360,7 +375,7 @@ void scoreboard_start() {
                         led_indicator_set_blink(&console_indicator[j], 400, 6);
                     }
                     if (consoles[j].is_active) {
-                        status = fetch_scoreboard_data(&hi2c1, &consoles[j], scoreboard_register);
+                         status = fetch_scoreboard_data(&hi2c1, &consoles[j], scoreboard_register);
                         if (status != HAL_OK) {
                             consoles[j].is_active = 0;
                         }

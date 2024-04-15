@@ -96,6 +96,10 @@ void struct2register(i2c_scoreboard_t *data) {
     i2c_register[i++] = (uint8_t) (data->date_time >> 16) & 0xFF;
     i2c_register[i++] = (uint8_t) (data->date_time >> 8) & 0xFF;
     i2c_register[i++] = (uint8_t) data->date_time & 0xFF;
+    i2c_register[i++] = (uint8_t) (data->command >> 24) & 0xFF;
+    i2c_register[i++] = (uint8_t) (data->command >> 16) & 0xFF;
+    i2c_register[i++] = (uint8_t) (data->command >> 8) & 0xFF;
+    i2c_register[i++] = (uint8_t) data->command & 0xFF;
 }
 
 void register2struct(uint8_t reg[], i2c_scoreboard_t *data) {
@@ -132,24 +136,35 @@ void register2struct(uint8_t reg[], i2c_scoreboard_t *data) {
     data->high_score_hard |= reg[i++];
     data->high_score_insane = (reg[i++] << 8);
     data->high_score_insane |= reg[i++];
-    memcpy(data->initials_easy, (char *) &reg[i], 3);
+    memcpy(data->initials_easy, (char*) &reg[i], 3);
     i += 3;
-    memcpy(data->initials_medium, (char *) &reg[i], 3);
+    memcpy(data->initials_medium, (char*) &reg[i], 3);
     i += 3;
-    memcpy(data->initials_hard, (char *) &reg[i], 3);
+    memcpy(data->initials_hard, (char*) &reg[i], 3);
     i += 3;
-    memcpy(data->initials_insane, (char *) &reg[i], 3);
+    memcpy(data->initials_insane, (char*) &reg[i], 3);
     i += 3;
     data->date_time = (reg[i++] << 24);
     data->date_time |= (reg[i++] << 16);
     data->date_time |= (reg[i++] << 8);
     data->date_time |= reg[i++];
+    // Clear out command since it's write only
+    data->command = 0;
 }
 
-void update_register(i2c_scoreboard_t *data, game_stats_t game_stats[], uint16_t current_score[], uint16_t best_score,
-        uint16_t number_apples[], uint8_t level, uint8_t game_in_progress, uint8_t game_pause,
-        uint8_t game_over, uint8_t game_pace, uint8_t clock_sync_flag, uint32_t game_elapsed_time,
-        game_options_t *game_options, grid_size_options_t grid_size_options) {
+void update_command_register(i2c_scoreboard_t *data, uint32_t command) {
+    data->command = command;
+    uint8_t i = 0x30;
+    i2c_register[i++] = (uint8_t) (data->command >> 24) & 0xFF;
+    i2c_register[i++] = (uint8_t) (data->command >> 16) & 0xFF;
+    i2c_register[i++] = (uint8_t) (data->command >> 8) & 0xFF;
+    i2c_register[i++] = (uint8_t) data->command & 0xFF;
+}
+
+void update_register(i2c_scoreboard_t *data, game_stats_t game_stats[], uint16_t current_score[],
+        uint16_t best_score, uint16_t number_apples[], uint8_t level, uint8_t game_in_progress,
+        uint8_t game_pause, uint8_t game_over, uint8_t game_pace, uint8_t clock_sync_flag,
+        uint32_t game_elapsed_time, game_options_t *game_options, grid_size_options_t grid_size_options) {
 
     RTC_TimeTypeDef sTime;
     RTC_DateTypeDef sDate;
@@ -157,8 +172,7 @@ void update_register(i2c_scoreboard_t *data, game_stats_t game_stats[], uint16_t
     HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
     HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
     uint8_t console_id = ((I2C2->OAR1 & 0x7E) >> 1) - 15;
-    data->console_info = console_id | CONSOLE_SIGNATURE
-            | (clock_sync_flag << CONSOLE_CLOCK_SHIFT)
+    data->console_info = console_id | CONSOLE_SIGNATURE | (clock_sync_flag << CONSOLE_CLOCK_SHIFT)
             | (((uint8_t) game_options->difficulty & 0x0F) << GAME_LEVEL_MODE_SHIFT);
 
     uint8_t game_progress = 0;
@@ -171,8 +185,8 @@ void update_register(i2c_scoreboard_t *data, game_stats_t game_stats[], uint16_t
     }
 
     data->current_game_state = (game_progress & 0x03) | (level << GAME_PLAYING_LEVEL_SHIFT);
-    data->current_game_state2 = (uint8_t) game_options->num_players
-            | (game_pace << GAME_SPEED_SHIFT) | ((uint8_t) game_options->poison << GAME_POISON_SHIFT);
+    data->current_game_state2 = (uint8_t) game_options->num_players | (game_pace << GAME_SPEED_SHIFT)
+            | ((uint8_t) game_options->poison << GAME_POISON_SHIFT);
     data->current_game_state3 = (game_over & GAME_CAUSE_OF_DEATH)
             | ((grid_size_options << GAME_GRID_SIZE_SHIFT) & GAME_GRID_SIZE);
     data->current_score1 = current_score[0];
@@ -194,9 +208,8 @@ void update_register(i2c_scoreboard_t *data, game_stats_t game_stats[], uint16_t
     memcpy(data->initials_hard, game_stats[HARD].player_name, 3);
     memcpy(data->initials_insane, game_stats[INSANE].player_name, 3);
 
-    data->date_time = (sDate.Year << YEAR_SHIFT) | (sDate.Month << MONTH_SHIFT)
-            | (sDate.Date << DAY_SHIFT) | (sTime.Hours << HOUR_SHIFT) | (sTime.Minutes << MINUTE_SHIFT)
-            | (sTime.Seconds << SECOND_SHIFT);
+    data->date_time = (sDate.Year << YEAR_SHIFT) | (sDate.Month << MONTH_SHIFT) | (sDate.Date << DAY_SHIFT)
+            | (sTime.Hours << HOUR_SHIFT) | (sTime.Minutes << MINUTE_SHIFT) | (sTime.Seconds << SECOND_SHIFT);
     struct2register(data);
 }
 
@@ -226,12 +239,33 @@ HAL_StatusTypeDef get_console_data(I2C_HandleTypeDef *hi2c, uint16_t i2c_addr, u
     }
 }
 
-HAL_StatusTypeDef fetch_scoreboard_data(I2C_HandleTypeDef *hi2c, device_list_t *device, uint8_t scoreboard_data[]) {
+HAL_StatusTypeDef fetch_scoreboard_data(I2C_HandleTypeDef *hi2c, device_list_t *device,
+        uint8_t scoreboard_data[]) {
     HAL_StatusTypeDef status;
     uint8_t reg_addr[1] = { 0 };
     status = HAL_I2C_Master_Transmit(hi2c, device->i2c_addr << 1, reg_addr, 1, I2C_TIMEOUT);
     if (status == HAL_OK) {
-        status = HAL_I2C_Master_Receive(hi2c, device->i2c_addr << 1, scoreboard_data, REGISTERS_SIZE, I2C_TIMEOUT);
+        status = HAL_I2C_Master_Receive(hi2c, device->i2c_addr << 1, scoreboard_data, REGISTERS_SIZE,
+        I2C_TIMEOUT);
+    }
+    return status;
+}
+
+HAL_StatusTypeDef i2c_send_command(I2C_HandleTypeDef *hi2c, device_list_t device[], uint32_t command) {
+    HAL_StatusTypeDef status;
+    uint8_t data[4] = { 0 };
+    data[0] = (uint8_t) (command >> 24) & 0xFF;
+    data[1] = (uint8_t) (command >> 16) & 0xFF;
+    data[2] = (uint8_t) (command >> 8) & 0xFF;
+    data[3] = (uint8_t) command & 0xFF;
+
+    for (uint8_t i = 0; i < MAX_NUM_CONSOLES; i++) {
+        if (device[i].is_active) {
+            status = HAL_I2C_Mem_Write(hi2c, device[i].i2c_addr << 1, 0x30, sizeof(uint8_t), data, 4, I2C_TIMEOUT);
+            if (status != HAL_OK) {
+                __NOP(); // Ignore error, continue to next device
+            }
+        }
     }
     return status;
 }

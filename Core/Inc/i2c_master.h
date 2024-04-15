@@ -13,7 +13,7 @@
 #define I2C_TIMEOUT (15)
 #define I2C_SLAVE_START_ADDR (0x10)
 #define I2C_BUFFER_SIZE (0x3F)
-#define REGISTERS_SIZE (0x30)
+#define REGISTERS_SIZE (0x34)
 
 typedef struct {
     uint16_t i2c_addr;
@@ -29,4 +29,5 @@ HAL_StatusTypeDef get_console_data(I2C_HandleTypeDef *hi2c, uint16_t i2c_addr, u
         uint8_t *data, uint8_t len);
 HAL_StatusTypeDef fetch_scoreboard_data(I2C_HandleTypeDef *hi2c, device_list_t *device, uint8_t scoreboard_data[]);
 HAL_StatusTypeDef i2c_master_scan(I2C_HandleTypeDef *hi2c, device_list_t device[]);
+HAL_StatusTypeDef i2c_send_command(I2C_HandleTypeDef *hi2c, device_list_t device[], uint32_t command);
 #endif /* INC_I2C_MASTER_H_ */
