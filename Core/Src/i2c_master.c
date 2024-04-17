@@ -100,6 +100,10 @@ void struct2register(i2c_scoreboard_t *data) {
     i2c_register[i++] = (uint8_t) (data->command >> 16) & 0xFF;
     i2c_register[i++] = (uint8_t) (data->command >> 8) & 0xFF;
     i2c_register[i++] = (uint8_t) data->command & 0xFF;
+    i2c_register[i++] = (uint8_t) (data->random_seed >> 24) & 0xFF;
+    i2c_register[i++] = (uint8_t) (data->random_seed >> 16) & 0xFF;
+    i2c_register[i++] = (uint8_t) (data->random_seed >> 8) & 0xFF;
+    i2c_register[i++] = (uint8_t) data->random_seed & 0xFF;
 }
 
 void register2struct(uint8_t reg[], i2c_scoreboard_t *data) {
@@ -251,17 +255,22 @@ HAL_StatusTypeDef fetch_scoreboard_data(I2C_HandleTypeDef *hi2c, device_list_t *
     return status;
 }
 
-HAL_StatusTypeDef i2c_send_command(I2C_HandleTypeDef *hi2c, device_list_t device[], uint32_t command) {
+HAL_StatusTypeDef i2c_send_command(I2C_HandleTypeDef *hi2c, device_list_t device[], uint32_t command, uint32_t random_seed) {
     HAL_StatusTypeDef status;
-    uint8_t data[4] = { 0 };
+    uint8_t data[8] = { 0 };
+
     data[0] = (uint8_t) (command >> 24) & 0xFF;
     data[1] = (uint8_t) (command >> 16) & 0xFF;
     data[2] = (uint8_t) (command >> 8) & 0xFF;
     data[3] = (uint8_t) command & 0xFF;
+    data[4] = (uint8_t) (random_seed >> 24) & 0xFF;
+    data[5] = (uint8_t) (random_seed >> 16) & 0xFF;
+    data[6] = (uint8_t) (random_seed >> 8) & 0xFF;
+    data[7] = (uint8_t) random_seed & 0xFF;
 
     for (uint8_t i = 0; i < MAX_NUM_CONSOLES; i++) {
         if (device[i].is_active) {
-            status = HAL_I2C_Mem_Write(hi2c, device[i].i2c_addr << 1, 0x30, sizeof(uint8_t), data, 4, I2C_TIMEOUT);
+            status = HAL_I2C_Mem_Write(hi2c, device[i].i2c_addr << 1, 0x30, sizeof(uint8_t), data, 8, I2C_TIMEOUT);
             if (status != HAL_OK) {
                 __NOP(); // Ignore error, continue to next device
             }

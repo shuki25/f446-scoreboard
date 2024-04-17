@@ -157,6 +157,7 @@ void scoreboard_start() {
     int i = 0; // command buffer index
     HAL_StatusTypeDef status;
     uint32_t i2c_command = 0;
+    uint32_t seed = 0;
 
     // Initialize the ring buffer
     ring_buffer_init(&rx_buffer, 256, sizeof(uint8_t));
@@ -307,9 +308,18 @@ void scoreboard_start() {
                     case CMD_START_GAME:
                     case CMD_END_GAME:
                     case CMD_PAUSE_GAME:
+                    case CMD_RANDOM_SEED:
                         i2c_command = parse_i2c_command(cmd_token, parameter);
+                        if (cmd_token == CMD_RANDOM_SEED) {
+                            seed = atoi((char*) parameter);
+                            if (seed == 0) {
+                                seed = TIM2->CNT;
+                            }
+                        } else {
+                            seed = 0;
+                        }
                         if (i2c_command != 0)
-                            i2c_send_command(&hi2c1, consoles, i2c_command);
+                            i2c_send_command(&hi2c1, consoles, i2c_command, seed);
                         break;
                     default:
                         execute_command(&scoreboard, cmd_token, parameter);
@@ -375,7 +385,7 @@ void scoreboard_start() {
                         led_indicator_set_blink(&console_indicator[j], 400, 6);
                     }
                     if (consoles[j].is_active) {
-                         status = fetch_scoreboard_data(&hi2c1, &consoles[j], scoreboard_register);
+                        status = fetch_scoreboard_data(&hi2c1, &consoles[j], scoreboard_register);
                         if (status != HAL_OK) {
                             consoles[j].is_active = 0;
                         }

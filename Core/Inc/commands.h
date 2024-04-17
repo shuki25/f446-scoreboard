@@ -35,6 +35,7 @@ typedef enum command {
     CMD_START_GAME, // parameter is speed 0-60
     CMD_END_GAME,
     CMD_PAUSE_GAME,
+    CMD_RANDOM_SEED,
     NUM_COMMANDS
 } command_t;
 

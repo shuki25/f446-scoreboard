@@ -62,18 +62,19 @@
 #define SECOND_SHIFT (0)
 
 // 32-Bit Definitions for the command
-// 31    26  23     16        8        0
-// +------+---+-------+--------+--------+
-// |000000|CMD|RESERVE|  PARAM2|  PARAM1|
-// +------+---+-------+--------+--------+
+// 31  27   23      16        8        0
+// +-----+----+-------+--------+--------+
+// |00000| CMD|RESERVE|  PARAM2|  PARAM1|
+// +-----+----+-------+--------+--------+
 
-#define I2C_CMD_SET_SPEED       (0b001 << 23)
-#define I2C_CMD_SET_LEVEL       (0b010 << 23)
-#define I2C_CMD_SET_POISON      (0b011 << 23)
-#define I2C_CMD_PREPARE_GAME    (0b100 << 23)
-#define I2C_CMD_START_GAME      (0b101 << 23)
-#define I2C_CMD_PAUSE_GAME      (0b110 << 23)
-#define I2C_CMD_END_GAME        (0b111 << 23)
+#define I2C_CMD_SET_SPEED       (0b0001 << 23)
+#define I2C_CMD_SET_LEVEL       (0b0010 << 23)
+#define I2C_CMD_SET_POISON      (0b0011 << 23)
+#define I2C_CMD_PREPARE_GAME    (0b0100 << 23)
+#define I2C_CMD_START_GAME      (0b0101 << 23)
+#define I2C_CMD_PAUSE_GAME      (0b0110 << 23)
+#define I2C_CMD_END_GAME        (0b0111 << 23)
+#define I2C_CMD_RANDOM_SEED     (0b1000 << 23)
 #define PARAM1_MASK             (0b11111111)
 #define PARAM1_SHIFT            (0)
 #define PARAM2_MASK             (0b11111111 << 8)
@@ -104,6 +105,7 @@ typedef struct {                    // Register Map
     char initials_insane[3];        // 0x29
     uint32_t date_time;             // 0x2C
     uint32_t command;               // 0x30
+    uint32_t random_seed;           // 0x34
 } i2c_scoreboard_t;
 
 typedef enum mode {
@@ -160,6 +162,7 @@ typedef struct scoreboard {
     uint8_t is_demo_mode_initialized;
     score_t scores[MAX_NUM_CONSOLES];
     stats_t stats[MAX_NUM_CONSOLES];
+    uint32_t random_seed;
 } scoreboard_t;
 
 

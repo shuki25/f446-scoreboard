@@ -16,8 +16,8 @@
 // Must align with command_t
 const char *valid_commands[] = { "", "", "@terminal", "@pc_console", "@scoreboard", "@set_date", "@set_time",
         "@get_date", "@get_time", "@devices", "@scores", "@poll", "@demo", "@stats", "@set_speed", "@set_level",
-        "@prepare_game", "@start_game", "@end_game", "@pause_game", NULL };
-uint8_t valid_num_params[] = { 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 2, 1, 0, 0, 0 };
+        "@prepare_game", "@start_game", "@end_game", "@pause_game", "@seed", NULL };
+uint8_t valid_num_params[] = { 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 2, 1, 0, 0, 1, 0 };
 const char *snake_names[] =
         { "", "Ball Python", "Red-Tail Boa", "Black Rat Snake", "King Snake", "Corn Snake" };
 
@@ -108,6 +108,9 @@ uint32_t parse_i2c_command(command_t cmd_token, uint8_t *parameter) {
             break;
         case CMD_PAUSE_GAME: // no parameters
             data |= I2C_CMD_PAUSE_GAME;
+            break;
+        case CMD_RANDOM_SEED: // no parameters
+            data |= I2C_CMD_RANDOM_SEED;
             break;
         default:
             return 0;
