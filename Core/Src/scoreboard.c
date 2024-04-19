@@ -158,6 +158,8 @@ void scoreboard_start() {
     HAL_StatusTypeDef status;
     uint32_t i2c_command = 0;
     uint32_t seed = 0;
+    uint8_t game_ended[MAX_NUM_CONSOLES] = { 0 };
+    uint8_t tournament_ended = 0;
 
     // Initialize the ring buffer
     ring_buffer_init(&rx_buffer, 256, sizeof(uint8_t));
@@ -315,6 +317,9 @@ void scoreboard_start() {
                             if (seed == 0) {
                                 seed = TIM2->CNT;
                             }
+                        } else if (cmd_token == CMD_START_GAME) {
+                            scoreboard.is_tournament_mode = 1;
+                            memset(game_ended, 0, sizeof(game_ended));
                         } else {
                             seed = 0;
                         }
@@ -337,6 +342,7 @@ void scoreboard_start() {
                     scoreboard_demo_mode_init();
                 }
                 for (int j = 0; j < MAX_NUM_CONSOLES; j++) {
+                    consoles[j].is_active = 1;
                     if (scoreboard.scores[j].game_status == 1) {
                         if (scoreboard.scores[j].score1 > 150 && rng_get(50) >= 35) {
                             scoreboard.scores[j].game_status = 3;
@@ -439,6 +445,26 @@ void scoreboard_start() {
                     }
                 }
             }
+            if (scoreboard.is_tournament_mode) {
+                for (int k = 0; k < MAX_NUM_CONSOLES; k++) {
+                    if (consoles[k].is_active) {
+                        if (scoreboard.scores[k].game_status == 3) { // game ended
+                            game_ended[k] = 1;
+                        }
+                    }
+                }
+
+                tournament_ended = 1;
+                for (int k = 0; k < MAX_NUM_CONSOLES; k++) {
+                    if (game_ended[k] == 0) { // At least one console is still playing, so tournament is not over
+                        tournament_ended = 0;
+                    }
+                }
+                if (tournament_ended) {
+                    scoreboard.is_tournament_mode = 0;
+                }
+            }
+
             if (scoreboard.polling_mode) {
                 cmd_token = CMD_LIST_SCORES;
                 memset(parameter, 0, sizeof(parameter));

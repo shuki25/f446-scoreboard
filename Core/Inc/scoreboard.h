@@ -160,6 +160,7 @@ typedef struct scoreboard {
     uint8_t polling_mode;
     uint8_t demo_mode;
     uint8_t is_demo_mode_initialized;
+    uint8_t is_tournament_mode;
     score_t scores[MAX_NUM_CONSOLES];
     stats_t stats[MAX_NUM_CONSOLES];
     uint32_t random_seed;
