@@ -236,7 +236,7 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
             break;
         case CMD_SCOREBOARD_MODE:
             scoreboard->mode = SCOREBOARD_MODE;
-            print_scoreboard(scoreboard, "{'mode': 'scoreboard', 'status': 1}\n");
+            print_scoreboard(scoreboard, "{'mode': 'scoreboard', 'status': 1}\r\n");
             break;
         case CMD_SET_DATE:
             if (parse_date(parameter, &year, &month, &day)) {
@@ -248,7 +248,7 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                     sprintf(output_buffer, "OK\t%04d-%02d-%02d\n", year, month, day);
                     print_pc_console(scoreboard, output_buffer);
                 } else {
-                    sprintf(output_buffer, "{'date': '%04d-%02d-%02d', 'status': 1}\n", year, month, day);
+                    sprintf(output_buffer, "{'date': '%04d-%02d-%02d', 'status': 1}\r\n", year, month, day);
                     print_scoreboard(scoreboard, output_buffer);
                 }
             } else {
@@ -259,7 +259,7 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                     sprintf(output_buffer, "ERR\tInvalid date\n");
                     print_pc_console(scoreboard, output_buffer);
                 } else {
-                    sprintf(output_buffer, "{'error': 'Invalid date', 'status': 0}\n");
+                    sprintf(output_buffer, "{'error': 'Invalid date', 'status': 0}\r\n");
                     print_scoreboard(scoreboard, output_buffer);
                 }
                 return INVALID_COMMAND;
@@ -276,7 +276,7 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                     sprintf(output_buffer, "OK\t%02d:%02d:%02d\n", hour, minute, second);
                     print_pc_console(scoreboard, output_buffer);
                 } else {
-                    sprintf(output_buffer, "{'time': '%02d:%02d:%02d', 'status': 1}\n", hour, minute, second);
+                    sprintf(output_buffer, "{'time': '%02d:%02d:%02d', 'status': 1}\r\n", hour, minute, second);
                     print_scoreboard(scoreboard, output_buffer);
                 }
             } else {
@@ -293,7 +293,7 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                 sprintf(output_buffer, "OK\t%04d-%02d-%02d\n", year, month, day);
                 print_pc_console(scoreboard, output_buffer);
             } else {
-                sprintf(output_buffer, "{'date': '%04d-%02d-%02d', 'status': 1}\n", year, month, day);
+                sprintf(output_buffer, "{'date': '%04d-%02d-%02d', 'status': 1}\r\n", year, month, day);
                 print_scoreboard(scoreboard, output_buffer);
             }
             break;
@@ -307,7 +307,7 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                 sprintf(output_buffer, "OK\t%02d:%02d:%02d\n", hour, minute, second);
                 print_pc_console(scoreboard, output_buffer);
             } else {
-                sprintf(output_buffer, "{'time': '%02d:%02d:%02d', 'status': 1}\n", hour, minute, second);
+                sprintf(output_buffer, "{'time': '%02d:%02d:%02d', 'status': 1}\r\n", hour, minute, second);
                 print_scoreboard(scoreboard, output_buffer);
             }
             break;
@@ -353,7 +353,7 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                             scoreboard->scores[i].console_id, snake_names[scoreboard->scores[i].console_id]);
                     print_scoreboard(scoreboard, output_buffer);
                 }
-                print_scoreboard(scoreboard, "]}\n");
+                print_scoreboard(scoreboard, "]}\r\n");
             }
             break;
         case CMD_LIST_SCORES:
@@ -399,7 +399,8 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                     }
                     has_scores = 1;
                     if (first) {
-                        print_scoreboard(scoreboard, "\r\n{\"consoles\": {\"console\":[");
+                        sprintf(output_buffer, "{\"tournament_mode\": %d, \"scores\":[", scoreboard->is_tournament_mode);
+                        print_scoreboard(scoreboard, output_buffer);
                         first = 0;
                     } else {
                         print_scoreboard(scoreboard, ",");
@@ -427,9 +428,9 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                     print_scoreboard(scoreboard, output_buffer);
                 }
                 if (has_scores) {
-                    print_scoreboard(scoreboard, "]}}\n");
+                    print_scoreboard(scoreboard, "]}\r\n");
                 } else {
-                    print_scoreboard(scoreboard, "{'consoles': 'none', 'status': 1}\n");
+                    print_scoreboard(scoreboard, "{'consoles': 'none', 'status': 1}\r\n");
                 }
             }
             break;
@@ -446,7 +447,7 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                     sprintf(output_buffer, "ERR\tInvalid polling mode\n");
                     print_pc_console(scoreboard, output_buffer);
                 } else {
-                    sprintf(output_buffer, "{'error': 'Invalid polling mode', 'status': 0}\n");
+                    sprintf(output_buffer, "{'error': 'Invalid polling mode', 'status': 0}\r\n");
                     print_scoreboard(scoreboard, output_buffer);
                 }
                 return INVALID_COMMAND;
@@ -465,7 +466,7 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                     sprintf(output_buffer, "OK\t%s\n", scoreboard->demo_mode ? "on" : "off");
                     print_pc_console(scoreboard, output_buffer);
                 } else {
-                    sprintf(output_buffer, "{'demo_mode': '%s', 'status': 1}\n",
+                    sprintf(output_buffer, "{'demo_mode': '%s', 'status': 1}\r\n",
                             scoreboard->demo_mode ? "on" : "off");
                     print_scoreboard(scoreboard, output_buffer);
                 }
@@ -487,7 +488,7 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                     sprintf(output_buffer, "OK\tDemo mode reset\n");
                     print_pc_console(scoreboard, output_buffer);
                 } else {
-                    sprintf(output_buffer, "{'demo_mode': 'reset', 'status': 1}\n");
+                    sprintf(output_buffer, "{'demo_mode': 'reset', 'status': 1}\r\n");
                     print_scoreboard(scoreboard, output_buffer);
                 }
             } else {
@@ -498,7 +499,7 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                     sprintf(output_buffer, "ERR\tInvalid polling mode\n");
                     print_pc_console(scoreboard, output_buffer);
                 } else {
-                    sprintf(output_buffer, "{'error': 'Invalid polling mode', 'status': 0}\n");
+                    sprintf(output_buffer, "{'error': 'Invalid polling mode', 'status': 0}\r\n");
                     print_scoreboard(scoreboard, output_buffer);
                 }
                 return INVALID_COMMAND;
@@ -557,7 +558,7 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                     }
                     has_stats = 1;
                     if (first) {
-                        print_scoreboard(scoreboard, "\r\n{\"stats\": {\"console\":[");
+                        print_scoreboard(scoreboard, "{\"stats\":[");
                         first = 0;
                     } else {
                         print_scoreboard(scoreboard, ",");
@@ -581,9 +582,9 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                     print_scoreboard(scoreboard, output_buffer);
                 }
                 if (has_stats) {
-                    print_scoreboard(scoreboard, "]}}\n");
+                    print_scoreboard(scoreboard, "]}\r\n");
                 } else {
-                    print_scoreboard(scoreboard, "{'stats': 'none', 'status': 1}\n");
+                    print_scoreboard(scoreboard, "{'stats': 'none', 'status': 1}\r\n");
                 }
             }
             break;
@@ -595,7 +596,7 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                 sprintf(output_buffer, "ERR\tUnknow Command\n");
                 print_pc_console(scoreboard, output_buffer);
             } else if (scoreboard->mode == SCOREBOARD_MODE) {
-                sprintf(output_buffer, "{'error': 'Unknown command', 'status': 0}\n");
+                sprintf(output_buffer, "{'error': 'Unknown command', 'status': 0}\r\n");
                 print_scoreboard(scoreboard, output_buffer);
             }
             return INVALID_COMMAND;
