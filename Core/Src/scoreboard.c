@@ -27,6 +27,26 @@ scoreboard_t scoreboard;
 i2c_scoreboard_t i2c_scoreboard[MAX_NUM_CONSOLES];
 uint32_t random_seed = 3;
 
+
+/*-------------------------------------------------------------------------------------------------
+ * Function: time_elapsed
+ *
+ * This function will calculate the time elapsed between the previous time and the current time.
+ * It will take into account the rollover of the timer.
+ *
+ * Parameters: uint32_t previous_time - the previous time
+ *
+ * Return: uint32_t - the time elapsed
+ *-----------------------------------------------------------------------------------------------*/
+uint32_t time_elapsed(uint32_t previous_time) {
+    uint32_t current_time = TIM5->CNT;
+    if (current_time < previous_time) {
+        return 0xFFFFFFFF - previous_time + current_time;
+    } else {
+        return current_time - previous_time;
+    }
+}
+
 /*-------------------------------------------------------------------------------------------------
  * Function: rng_get
  *
@@ -160,6 +180,7 @@ void scoreboard_start() {
     uint32_t seed = 0;
     uint8_t game_ended[MAX_NUM_CONSOLES] = { 0 };
     uint8_t tournament_ended = 0;
+    uint32_t previous_time = TIM5->CNT;
 
     // Initialize the ring buffer
     ring_buffer_init(&rx_buffer, 256, sizeof(uint8_t));
@@ -332,11 +353,10 @@ void scoreboard_start() {
                 }
             }
         }
-        osDelay(1);
-        counter--;
-        if (counter == 0) {
+        osThreadYield();
+        if (time_elapsed(previous_time) >= 10000) {
+            previous_time = TIM5->CNT;
             link_counter--;
-            counter = 500;
             if (scoreboard.demo_mode) {
                 if (!scoreboard.is_demo_mode_initialized) {
                     scoreboard_demo_mode_init();
@@ -471,7 +491,7 @@ void scoreboard_start() {
                 execute_command(&scoreboard, cmd_token, parameter);
             }
         }
-        osDelay(1);
+        osThreadYield();
     }
 
 }

@@ -66,11 +66,11 @@ const osThreadAttr_t defaultTask_attributes = { .name = "defaultTask", .stack_si
 /* Definitions for heartbeatTask */
 osThreadId_t heartbeatTaskHandle;
 const osThreadAttr_t heartbeatTask_attributes = { .name = "heartbeatTask", .stack_size = 128 * 4, .priority =
-        (osPriority_t) osPriorityLow, };
+        (osPriority_t) osPriorityAboveNormal, };
 /* Definitions for rj45LEDTask */
 osThreadId_t rj45LEDTaskHandle;
 const osThreadAttr_t rj45LEDTask_attributes = { .name = "rj45LEDTask", .stack_size = 128 * 4, .priority =
-        (osPriority_t) osPriorityLow, };
+        (osPriority_t) osPriorityHigh, };
 /* USER CODE BEGIN PV */
 ring_buffer_t rx_buffer;
 led_indicator_t console_indicator[MAX_NUM_CONSOLES];

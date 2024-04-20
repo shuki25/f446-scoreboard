@@ -20,7 +20,7 @@
  *---------------------------------------------------------------------------*/
 void echo_terminal(scoreboard_t *s, uint8_t *rx_value) {
     if (s->mode == TERMINAL_CONSOLE_MODE) {
-        osDelay(5);
+        osDelay(1);
         CDC_Transmit_FS(rx_value, 1);
     }
 }
@@ -36,7 +36,7 @@ void echo_terminal(scoreboard_t *s, uint8_t *rx_value) {
  *---------------------------------------------------------------------------*/
 void print_terminal(scoreboard_t *s, char *message) {
     if (s->mode == TERMINAL_CONSOLE_MODE) {
-        osDelay(5);
+        osDelay(1);
         CDC_Transmit_FS((uint8_t*) message, strlen(message));
     }
 }
@@ -52,7 +52,7 @@ void print_terminal(scoreboard_t *s, char *message) {
  *---------------------------------------------------------------------------*/
 void print_scoreboard(scoreboard_t *s, char *message) {
     if (s->mode == SCOREBOARD_MODE) {
-        osDelay(5);
+        osDelay(1);
         CDC_Transmit_FS((uint8_t*) message, strlen(message));
     }
 }
@@ -68,7 +68,7 @@ void print_scoreboard(scoreboard_t *s, char *message) {
  *---------------------------------------------------------------------------*/
 void print_pc_console(scoreboard_t *s, char *message) {
     if (s->mode == PC_CONSOLE_MODE) {
-        osDelay(5);
+        osDelay(1);
         CDC_Transmit_FS((uint8_t*) message, strlen(message));
     }
 }
