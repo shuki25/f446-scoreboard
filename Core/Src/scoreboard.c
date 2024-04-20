@@ -171,7 +171,6 @@ void scoreboard_start() {
     uint8_t ring_buffer_status;
     device_list_t consoles[5];
     uint8_t scoreboard_register[REGISTERS_SIZE];
-    uint16_t counter = 1000;
     uint16_t link_counter = 5;
     bool has_command = false;
     int i = 0; // command buffer index
@@ -465,12 +464,17 @@ void scoreboard_start() {
                     }
                 }
             }
+
+            // If the tournament mode is enabled, check if the tournament is over
+
             if (scoreboard.is_tournament_mode) {
                 for (int k = 0; k < MAX_NUM_CONSOLES; k++) {
                     if (consoles[k].is_active) {
                         if (scoreboard.scores[k].game_status == 3) { // game ended
                             game_ended[k] = 1;
                         }
+                    } else {
+                        game_ended[k] = 1; // If less than MAX_NUM_CONSOLES are connected, inactive slot is considered game ended
                     }
                 }
 
