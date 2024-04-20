@@ -222,6 +222,7 @@ uint8_t parse_time(uint8_t *time, uint16_t *hour, uint16_t *minute, uint16_t *se
 cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_t *parameter) {
     uint16_t year, month, day, hour, minute, second;
     uint8_t num_console;
+    uint8_t is_first;
     char output_buffer[256];
     memset(output_buffer, 0, sizeof(output_buffer));
 
@@ -339,11 +340,13 @@ cmd_status_t execute_command(scoreboard_t *scoreboard, command_t command, uint8_
                 }
                 print_pc_console(scoreboard, "\n");
             } else {
+                is_first = 1;
                 for (int i = 0; i < scoreboard->num_consoles; i++) {
                     if (!scoreboard->scores[i].is_connected) {
                         continue;
                     }
-                    if (i == 0) {
+                    if (is_first) {
+                        is_first = 0;
                         sprintf(output_buffer, "{\"num_devices\": %d, \"devices\":[", num_console);
                         print_scoreboard(scoreboard, output_buffer);
                     } else {
