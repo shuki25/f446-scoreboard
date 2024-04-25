@@ -75,6 +75,8 @@
 #define I2C_CMD_PAUSE_GAME      (0b0110 << 23)
 #define I2C_CMD_END_GAME        (0b0111 << 23)
 #define I2C_CMD_RANDOM_SEED     (0b1000 << 23)
+#define I2C_CMD_TOURNAMENT_END  (0b1001 << 23)
+#define I2C_CMD_MASK            (0b1111 << 23)
 #define PARAM1_MASK             (0b11111111)
 #define PARAM1_SHIFT            (0)
 #define PARAM2_MASK             (0b11111111 << 8)

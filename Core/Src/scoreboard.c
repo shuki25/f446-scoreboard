@@ -27,7 +27,6 @@ scoreboard_t scoreboard;
 i2c_scoreboard_t i2c_scoreboard[MAX_NUM_CONSOLES];
 uint32_t random_seed = 3;
 
-
 /*-------------------------------------------------------------------------------------------------
  * Function: time_elapsed
  *
@@ -486,6 +485,8 @@ void scoreboard_start() {
                 }
                 if (tournament_ended) {
                     scoreboard.is_tournament_mode = 0;
+                    // Send tournament end command to all consoles
+                    i2c_send_command(&hi2c1, consoles, I2C_CMD_TOURNAMENT_END, 0);
                 }
             }
 
